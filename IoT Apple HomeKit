@@ -1,145 +1,186 @@
 /*
- * my_accessory.c
- * Define the accessory in C language using the Macro in characteristics.h
+ * switch.ino
+ *
+ *  Created on: 2020-05-15
+ *      Author: Mixiaoxiao (Wang Bin)
+ *
+ * HAP section 8.38 Switch
+ * An accessory contains a switch.
+ *
+ * This example shows how to:
+ * 1. define a switch accessory and its characteristics (in my_accessory.c).
+ * 2. get the switch-event sent from iOS Home APP.
+ * 3. report the switch value to HomeKit.
+ *
+ * You should:
+ * 1. read and use the Example01_TemperatureSensor with detailed comments
+ *    to know the basic concept and usage of this library before other examples。
+ * 2. erase the full flash or call homekit_storage_reset() in setup()
+ *    to remove the previous HomeKit pairing storage and
+ *    enable the pairing with the new accessory of this new HomeKit example.
+ */
+
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <arduino_homekit_server.h>
+#include "wifi_info.h"
+
+#define LOG_D(fmt, ...)   printf_P(PSTR(fmt "\n") , ##__VA_ARGS__);
+
+//Relay pin definition
+#define R1 D0
+#define R2 D1
+#define R3 D2
+#define R4 D3
+#define R5 D4
+#define R6 D5
+
+int switch_ON_Flag1_previous_I = 0;
+int switch_ON_Flag2_previous_I = 0;
+int switch_ON_Flag3_previous_I = 0;
+int switch_ON_Flag4_previous_I = 0;
+int switch_ON_Flag5_previous_I = 0;
+int switch_ON_Flag6_previous_I = 0;
+
+
+void setup() {
+	Serial.begin(115200);
+	wifi_connect(); // in wifi_info.h
+	//homekit_storage_reset(); // to remove the previous HomeKit pairing storage when you first run this new HomeKit example
+	my_homekit_setup();
+}
+
+void loop() {
+	my_homekit_loop();
+	delay(10);
+}
+
+//==============================
+// HomeKit setup and loop
+//==============================
+
+// access your HomeKit characteristics defined in my_accessory.c
+extern "C" homekit_server_config_t config;
+extern "C" homekit_characteristic_t cha_switch1_on;
+extern "C" homekit_characteristic_t cha_switch2_on;
+extern "C" homekit_characteristic_t cha_switch3_on;
+extern "C" homekit_characteristic_t cha_switch4_on;
+extern "C" homekit_characteristic_t cha_switch5_on;
+extern "C" homekit_characteristic_t cha_switch6_on;
+
+static uint32_t next_heap_millis = 0;
+
+#define PIN_SWITCH 2
+
+//Called when the switch value is changed by iOS Home APP
+void cha_switch1_on_setter(const homekit_value_t value) {
+	bool on = value.bool_value;
+	cha_switch1_on.value.bool_value = on;	//sync the value
+	LOG_D("Switch: %s", on ? "ON" : "OFF");
+	digitalWrite(R1, on ? LOW : HIGH);
+}
+void cha_switch2_on_setter(const homekit_value_t value) {
+  bool on = value.bool_value;
+  cha_switch2_on.value.bool_value = on;  //sync the value
+  LOG_D("Switch: %s", on ? "ON" : "OFF");
+  digitalWrite(R2, on ? LOW : HIGH);
+}
+void cha_switch3_on_setter(const homekit_value_t value) {
+  bool on = value.bool_value;
+  cha_switch3_on.value.bool_value = on;  //sync the value
+  LOG_D("Switch: %s", on ? "ON" : "OFF");
+  digitalWrite(R3, on ? LOW : HIGH);
+}
+void cha_switch4_on_setter(const homekit_value_t value) {
+  bool on = value.bool_value;
+  cha_switch4_on.value.bool_value = on;  //sync the value
+  LOG_D("Switch: %s", on ? "ON" : "OFF");
+  digitalWrite(R4, on ? LOW : HIGH);
+}
+void cha_switch5_on_setter(const homekit_value_t value) {
+  bool on = value.bool_value;
+  cha_switch5_on.value.bool_value = on;  //sync the value
+  LOG_D("Switch: %s", on ? "ON" : "OFF");
+  digitalWrite(R5, on ? LOW : HIGH);
+}
+void cha_switch6_on_setter(const homekit_value_t value) {
+  bool on = value.bool_value;
+  cha_switch6_on.value.bool_value = on;  //sync the value
+  LOG_D("Switch: %s", on ? "ON" : "OFF");
+  digitalWrite(R6, on ? LOW : HIGH);
+}
+
+void my_homekit_setup() {
+  pinMode(R1, OUTPUT); digitalWrite(R1, HIGH);  
+  pinMode(R2, OUTPUT); digitalWrite(R2, HIGH);
+  pinMode(R3, OUTPUT); digitalWrite(R3, HIGH);
+  pinMode(R4, OUTPUT); digitalWrite(R4, HIGH);
+  pinMode(R5, OUTPUT); digitalWrite(R5, HIGH);
+  pinMode(R6, OUTPUT); digitalWrite(R6, HIGH);
+
+	//Add the .setter function to get the switch-event sent from iOS Home APP.
+	//The .setter should be added before arduino_homekit_setup.
+	//HomeKit sever uses the .setter_ex internally, see homekit_accessories_init function.
+	//Maybe this is a legacy design issue in the original esp-homekit library,
+	//and I have no reason to modify this "feature".
+	cha_switch1_on.setter = cha_switch1_on_setter;
+  cha_switch2_on.setter = cha_switch2_on_setter;
+  cha_switch3_on.setter = cha_switch3_on_setter;
+  cha_switch4_on.setter = cha_switch4_on_setter;
+  cha_switch5_on.setter = cha_switch5_on_setter;
+  cha_switch6_on.setter = cha_switch6_on_setter;
+  
+	arduino_homekit_setup(&config);
+
+	//report the switch value to HomeKit if it is changed (e.g. by a physical button)
+	//bool switch_is_on = true/false;
+	//cha_switch_on.value.bool_value = switch_is_on;
+	//homekit_characteristic_notify(&cha_switch_on, cha_switch_on.value);
+}
+
+void my_homekit_loop() {
+	arduino_homekit_loop();
+	const uint32_t t = millis();
+	if (t > next_heap_millis) {
+		// show heap info every 5 seconds
+		next_heap_millis = t + 5 * 1000;
+		LOG_D("Free heap: %d, HomeKit clients: %d",
+				ESP.getFreeHeap(), arduino_homekit_connected_clients_count());
+
+	}
+}
+
+/*
+ * wifi_info.h
  *
  *  Created on: 2020-05-15
  *      Author: Mixiaoxiao (Wang Bin)
  */
 
-#include <homekit/homekit.h>
-#include <homekit/characteristics.h>
+#ifndef WIFI_INFO_H_
+#define WIFI_INFO_H_
 
-void my_accessory_identify(homekit_value_t _value) {
-	printf("accessory identify\n");
+#if defined(ESP8266)
+#include <ESP8266WiFi.h>
+#elif defined(ESP32)
+#include <WiFi.h>
+#endif
+
+const char *ssid = "Spongebob";
+const char *password = "123456789";
+
+void wifi_connect() {
+	WiFi.persistent(false);
+	WiFi.mode(WIFI_STA);
+	WiFi.setAutoReconnect(true);
+	WiFi.begin(ssid, password);
+	Serial.println("WiFi connecting...");
+	while (!WiFi.isConnected()) {
+		delay(100);
+		Serial.print(".");
+	}
+	Serial.print("\n");
+	Serial.printf("WiFi connected, IP: %s\n", WiFi.localIP().toString().c_str());
 }
 
-// Switch (HAP section 8.38)
-// required: ON
-// optional: NAME
-
-// format: bool; HAP section 9.70; write the .setter function to get the switch-event sent from iOS Home APP.
-homekit_characteristic_t cha_switch1_on = HOMEKIT_CHARACTERISTIC_(ON, false);
-homekit_characteristic_t cha_switch2_on = HOMEKIT_CHARACTERISTIC_(ON, false);
-homekit_characteristic_t cha_switch3_on = HOMEKIT_CHARACTERISTIC_(ON, false);
-homekit_characteristic_t cha_switch4_on = HOMEKIT_CHARACTERISTIC_(ON, false);
-homekit_characteristic_t cha_switch5_on = HOMEKIT_CHARACTERISTIC_(ON, false);
-homekit_characteristic_t cha_switch6_on = HOMEKIT_CHARACTERISTIC_(ON, false);
-
-// format: string; HAP section 9.62; max length 64
-homekit_characteristic_t cha_name = HOMEKIT_CHARACTERISTIC_(NAME, "Control device");
-
-homekit_accessory_t *accessories[] = {
-    HOMEKIT_ACCESSORY(.id=1, .category=homekit_accessory_category_switch, .services=(homekit_service_t*[]) {
-        HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics=(homekit_characteristic_t*[]) {
-            HOMEKIT_CHARACTERISTIC(NAME, "Switch1"),
-            HOMEKIT_CHARACTERISTIC(MANUFACTURER, "Controler HomeKit"),
-            HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "0123456"),
-            HOMEKIT_CHARACTERISTIC(MODEL, "ESP8266/ESP32"),
-            HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "1.0"),
-            HOMEKIT_CHARACTERISTIC(IDENTIFY, my_accessory_identify),
-            NULL
-        }),
-		HOMEKIT_SERVICE(SWITCH, .primary=true, .characteristics=(homekit_characteristic_t*[]){
-			&cha_switch1_on,
-			&cha_name,
-			NULL
-		}),
-        NULL
-    }),
-    HOMEKIT_ACCESSORY(.id=2, .category=homekit_accessory_category_switch, .services=(homekit_service_t*[]) {
-        HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics=(homekit_characteristic_t*[]) {
-            HOMEKIT_CHARACTERISTIC(NAME, "Switch2"),
-            HOMEKIT_CHARACTERISTIC(MANUFACTURER, "Control HomeKit"),
-            HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "0123456"),
-            HOMEKIT_CHARACTERISTIC(MODEL, "ESP8266/ESP32"),
-            HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "1.0"),
-            HOMEKIT_CHARACTERISTIC(IDENTIFY, my_accessory_identify),
-            NULL
-        }),
-    HOMEKIT_SERVICE(SWITCH, .primary=true, .characteristics=(homekit_characteristic_t*[]){
-      &cha_switch2_on,
-      &cha_name,
-      NULL
-    }),
-        NULL
-    }),
-
-     HOMEKIT_ACCESSORY(.id=3, .category=homekit_accessory_category_switch, .services=(homekit_service_t*[]) {
-        HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics=(homekit_characteristic_t*[]) {
-            HOMEKIT_CHARACTERISTIC(NAME, "Switch3"),
-            HOMEKIT_CHARACTERISTIC(MANUFACTURER, "Control HomeKit"),
-            HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "0123456"),
-            HOMEKIT_CHARACTERISTIC(MODEL, "ESP8266/ESP32"),
-            HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "1.0"),
-            HOMEKIT_CHARACTERISTIC(IDENTIFY, my_accessory_identify),
-            NULL
-        }),
-    HOMEKIT_SERVICE(SWITCH, .primary=true, .characteristics=(homekit_characteristic_t*[]){
-      &cha_switch3_on,
-      &cha_name,
-      NULL
-    }),
-        NULL
-    }),
-
-     HOMEKIT_ACCESSORY(.id=4, .category=homekit_accessory_category_switch, .services=(homekit_service_t*[]) {
-        HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics=(homekit_characteristic_t*[]) {
-            HOMEKIT_CHARACTERISTIC(NAME, "Switch4"),
-            HOMEKIT_CHARACTERISTIC(MANUFACTURER, "Control HomeKit"),
-            HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "0123456"),
-            HOMEKIT_CHARACTERISTIC(MODEL, "ESP8266/ESP32"),
-            HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "1.0"),
-            HOMEKIT_CHARACTERISTIC(IDENTIFY, my_accessory_identify),
-            NULL
-        }),
-    HOMEKIT_SERVICE(SWITCH, .primary=true, .characteristics=(homekit_characteristic_t*[]){
-      &cha_switch4_on,
-      &cha_name,
-      NULL
-    }),
-        NULL
-    }),
-
-     HOMEKIT_ACCESSORY(.id=5, .category=homekit_accessory_category_switch, .services=(homekit_service_t*[]) {
-        HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics=(homekit_characteristic_t*[]) {
-            HOMEKIT_CHARACTERISTIC(NAME, "Switch5"),
-            HOMEKIT_CHARACTERISTIC(MANUFACTURER, "Control HomeKit"),
-            HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "0123456"),
-            HOMEKIT_CHARACTERISTIC(MODEL, "ESP8266/ESP32"),
-            HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "1.0"),
-            HOMEKIT_CHARACTERISTIC(IDENTIFY, my_accessory_identify),
-            NULL
-        }),
-    HOMEKIT_SERVICE(SWITCH, .primary=true, .characteristics=(homekit_characteristic_t*[]){
-      &cha_switch5_on,
-      &cha_name,
-      NULL
-    }),
-        NULL
-    }),
-
-     HOMEKIT_ACCESSORY(.id=6, .category=homekit_accessory_category_switch, .services=(homekit_service_t*[]) {
-        HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics=(homekit_characteristic_t*[]) {
-            HOMEKIT_CHARACTERISTIC(NAME, "Switch6"),
-            HOMEKIT_CHARACTERISTIC(MANUFACTURER, "Control HomeKit"),
-            HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "0123456"),
-            HOMEKIT_CHARACTERISTIC(MODEL, "ESP8266/ESP32"),
-            HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "1.0"),
-            HOMEKIT_CHARACTERISTIC(IDENTIFY, my_accessory_identify),
-            NULL
-        }),
-    HOMEKIT_SERVICE(SWITCH, .primary=true, .characteristics=(homekit_characteristic_t*[]){
-      &cha_switch6_on,
-      &cha_name,
-      NULL
-    }),
-        NULL
-    }),
-    
-    NULL
-};
-
-homekit_server_config_t config = {
-		.accessories = accessories,
-		.password = "123-45-678"
-};
+#endif /* WIFI_INFO_H_ */
